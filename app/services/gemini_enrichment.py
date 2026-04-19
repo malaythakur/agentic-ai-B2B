@@ -3,11 +3,14 @@ Gemini AI Lead Enrichment Service
 Uses Google's Gemini API (free tier) to research and enrich lead data
 """
 import json
+import logging
 import re
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
 import httpx
 from datetime import datetime
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -378,6 +381,32 @@ Respond ONLY with JSON:
                 "body": f"Hi there,\n\nI'd love to learn more about {lead.company} and explore if we can help with {lead.pain_points[0] if lead.pain_points else 'your current challenges'}.\n\nWorth a brief chat?\n\nBest",
                 "hook": "General outreach"
             }
+    
+    async def _make_request(self, endpoint: str, data: Dict) -> Optional[str]:
+        """Make raw request to Gemini API - used by provider discovery"""
+        try:
+            url = f"{self.GEMINI_API_URL}?key={self.api_key}"
+            
+            response = await self.client.post(
+                url,
+                json=data,
+                headers={"Content-Type": "application/json"}
+            )
+            response.raise_for_status()
+            
+            result = response.json()
+            # Extract text from response
+            candidates = result.get("candidates", [])
+            if candidates:
+                content = candidates[0].get("content", {})
+                parts = content.get("parts", [])
+                if parts:
+                    return parts[0].get("text", "")
+            return None
+            
+        except Exception as e:
+            logger.error(f"Gemini API error: {e}")
+            return None
     
     async def close(self):
         """Close HTTP client"""

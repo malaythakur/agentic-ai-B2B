@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     GMAIL_TOKEN_PATH: str = "data/token.json"
     GMAIL_SCOPES: str = "https://www.googleapis.com/auth/gmail.send,https://www.googleapis.com/auth/gmail.readonly,https://www.googleapis.com/auth/gmail.modify"
     
+    # B2B Platform Configuration
+    PLATFORM_EMAIL: Optional[str] = None  # Central email for B2B platform communications
+    
     # OpenAI
     OPENAI_API_KEY: str
 

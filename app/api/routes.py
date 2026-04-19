@@ -25,6 +25,22 @@ from app.services.outbound_outreach import OutboundOutreachService
 from app.services.lead_enrichment_pipeline import LeadEnrichmentPipeline
 from app.services.transactional_billing import TransactionalBillingService
 from app.workers.tasks import import_leads_task, generate_batch_task, send_batch_task, classify_reply_task, autonomous_discovery_task
+
+# B2B Matchmaking Platform Services
+from app.services.b2b_buyer_discovery import B2BBuyerDiscoveryService
+from app.services.b2b_response_tracking import B2BResponseTrackingService
+from app.services.b2b_followup_service import B2BFollowupService
+from app.services.b2b_provider_dashboard import B2BProviderDashboardService
+from app.services.b2b_analytics_dashboard import B2BAnalyticsDashboardService
+from app.services.b2b_provider_discovery import B2BProviderDiscoveryService
+
+# B2B Celery Tasks
+from app.workers.tasks import (
+    run_b2b_buyer_discovery_task,
+    check_buyer_responses_task,
+    run_b2b_followups_task
+)
+from app.services.b2b_provider_discovery import run_b2b_provider_discovery_task
 from app.models import CampaignRun, OutboundMessage, Lead, Event
 from app.validators import (
     CreateLeadRequest,
@@ -3241,3 +3257,600 @@ async def get_provider_balance(provider_id: str, db: Session = Depends(get_db), 
         return {"status": "success", "data": balance}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================================
+# B2B Matchmaking Platform Endpoints
+# ============================================================================
+
+# B2B Provider Discovery Endpoints
+
+@router.post("/b2b/providers/discovery/run")
+async def run_b2b_provider_discovery(
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_admin_user)
+):
+    """
+    Manually trigger autonomous B2B provider discovery
+    
+    Discovers service providers from free sources:
+    - Clutch.co (service directories)
+    - G2 (software providers)
+    - GoodFirms (B2B services)
+    - GitHub (tech companies)
+    - Google Search (general discovery)
+    
+    Auto-enriches with Gemini AI and sends opt-in emails
+    """
+    try:
+        from app.settings import settings
+        service = B2BProviderDiscoveryService(
+            db=db,
+            gemini_api_key=settings.GEMINI_API_KEY,
+            platform_email=getattr(settings, 'PLATFORM_EMAIL', 'platform@example.com'),
+            dry_run=False
+        )
+        
+        import asyncio
+        results = await service.run_provider_discovery()
+        
+        return {
+            "status": "success",
+            "message": "B2B provider discovery completed",
+            "data": {
+                "discovered": results["discovered"],
+                "created": results["created"],
+                "optin_sent": results["optin_sent"],
+                "sources": results["sources"],
+                "providers": results["providers"]
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/b2b/providers/discovery/run/async")
+async def run_b2b_provider_discovery_async(
+    background_tasks: BackgroundTasks,
+    current_user: dict = Depends(get_current_admin_user)
+):
+    """
+    Trigger B2B provider discovery asynchronously via Celery
+    
+    Runs in background and discovers/enriches providers + sends opt-in emails
+    """
+    task = run_b2b_provider_discovery_task.delay()
+    return {
+        "status": "queued",
+        "task_id": task.id,
+        "message": "B2B provider discovery started in background. Providers will be discovered and opt-in emails sent automatically."
+    }
+
+
+@router.get("/b2b/providers/discovery/stats")
+async def get_b2b_provider_discovery_stats(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Get B2B provider discovery statistics"""
+    try:
+        from app.settings import settings
+        service = B2BProviderDiscoveryService(
+            db=db,
+            gemini_api_key=settings.GEMINI_API_KEY,
+            platform_email=getattr(settings, 'PLATFORM_EMAIL', 'platform@example.com'),
+            dry_run=True  # Just for stats
+        )
+        
+        stats = service.get_discovery_stats()
+        return {"status": "success", "data": stats}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# B2B Buyer Discovery Endpoints
+
+@router.post("/b2b/discovery/run")
+async def run_b2b_buyer_discovery(
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_admin_user)
+):
+    """
+    Manually trigger autonomous B2B buyer discovery
+    
+    Discovers buyers from free sources (GitHub, NewsAPI, Hacker News, Product Hunt, Job Boards)
+    Enriches with Gemini AI
+    Auto-matches to providers
+    """
+    try:
+        from app.settings import settings
+        service = B2BBuyerDiscoveryService(
+            db=db,
+            gemini_api_key=settings.GEMINI_API_KEY,
+            newsapi_key=getattr(settings, 'NEWSAPI_KEY', None)
+        )
+        
+        import asyncio
+        results = await service.run_buyer_discovery()
+        
+        return {
+            "status": "success",
+            "message": "B2B buyer discovery completed",
+            "data": {
+                "discovered": results["discovered"],
+                "created": results["created"],
+                "matched": results["matched"],
+                "buyers": results["buyers"]
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/b2b/discovery/run/async")
+async def run_b2b_buyer_discovery_async(
+    background_tasks: BackgroundTasks,
+    current_user: dict = Depends(get_current_admin_user)
+):
+    """
+    Trigger B2B buyer discovery asynchronously via Celery
+    
+    Runs in background and discovers/enriches/matches buyers automatically
+    """
+    task = run_b2b_buyer_discovery_task.delay()
+    return {
+        "status": "queued",
+        "task_id": task.id,
+        "message": "B2B buyer discovery started in background"
+    }
+
+
+@router.get("/b2b/discovery/stats")
+async def get_b2b_discovery_stats(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Get B2B buyer discovery statistics"""
+    try:
+        from app.settings import settings
+        service = B2BBuyerDiscoveryService(
+            db=db,
+            gemini_api_key=settings.GEMINI_API_KEY,
+            newsapi_key=getattr(settings, 'NEWSAPI_KEY', None)
+        )
+        
+        stats = service.get_discovery_stats()
+        return {"status": "success", "data": stats}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# B2B Response Tracking Endpoints
+
+@router.post("/b2b/responses/check")
+async def check_b2b_buyer_responses(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_admin_user)
+):
+    """
+    Check for buyer responses to B2B outreach
+    
+    Monitors Gmail for replies and classifies them using AI
+    """
+    try:
+        from app.settings import settings
+        service = B2BResponseTrackingService(
+            db=db,
+            gemini_api_key=settings.GEMINI_API_KEY
+        )
+        
+        results = service.check_all_pending_responses()
+        return {
+            "status": "success",
+            "data": {
+                "checked": results["checked"],
+                "responses_found": results["responses_found"],
+                "processed": results["processed"],
+                "errors": results["errors"]
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/b2b/responses/check/async")
+async def check_b2b_buyer_responses_async(
+    current_user: dict = Depends(get_current_admin_user)
+):
+    """Trigger buyer response checking asynchronously via Celery"""
+    task = check_buyer_responses_task.delay()
+    return {
+        "status": "queued",
+        "task_id": task.id,
+        "message": "Buyer response checking started in background"
+    }
+
+
+@router.get("/b2b/responses/stats")
+async def get_b2b_response_stats(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Get B2B response tracking statistics"""
+    try:
+        from app.settings import settings
+        service = B2BResponseTrackingService(
+            db=db,
+            gemini_api_key=settings.GEMINI_API_KEY
+        )
+        
+        stats = service.get_response_stats()
+        return {"status": "success", "data": stats}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# B2B Follow-up Endpoints
+
+@router.post("/b2b/followups/run")
+async def run_b2b_followups(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_admin_user)
+):
+    """
+    Run B2B follow-up sequences
+    
+    Sends Day 3, 7, 14 follow-ups to buyers who haven't responded
+    """
+    try:
+        service = B2BFollowupService(db)
+        results = service.process_all_followups()
+        
+        return {
+            "status": "success",
+            "data": {
+                "followups_sent": results["sent"],
+                "skipped": results["skipped"],
+                "errors": results["errors"],
+                "details": results["details"]
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/b2b/followups/run/async")
+async def run_b2b_followups_async(
+    current_user: dict = Depends(get_current_admin_user)
+):
+    """Trigger follow-up sequences asynchronously via Celery"""
+    task = run_b2b_followups_task.delay()
+    return {
+        "status": "queued",
+        "task_id": task.id,
+        "message": "B2B follow-ups started in background"
+    }
+
+
+@router.get("/b2b/followups/stats")
+async def get_b2b_followup_stats(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Get B2B follow-up statistics"""
+    try:
+        service = B2BFollowupService(db)
+        stats = service.get_followup_stats()
+        return {"status": "success", "data": stats}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# B2B Provider Dashboard Endpoints
+
+@router.get("/b2b/providers/{provider_id}/dashboard")
+async def get_provider_dashboard(
+    provider_id: str,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Get complete provider dashboard
+    
+    Returns: overview, automation status, matches, outreach, analytics, settings
+    """
+    try:
+        service = B2BProviderDashboardService(db)
+        dashboard = service.get_dashboard(provider_id)
+        
+        if not dashboard:
+            raise HTTPException(status_code=404, detail="Provider not found")
+        
+        return {"status": "success", "data": dashboard}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/b2b/providers/{provider_id}/automation/pause")
+async def pause_provider_automation(
+    provider_id: str,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Pause provider automation"""
+    try:
+        service = B2BProviderDashboardService(db)
+        result = service.pause_automation(provider_id)
+        
+        if not result:
+            raise HTTPException(status_code=404, detail="Provider not found")
+        
+        return {"status": "success", "message": "Automation paused"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/b2b/providers/{provider_id}/automation/resume")
+async def resume_provider_automation(
+    provider_id: str,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Resume provider automation"""
+    try:
+        service = B2BProviderDashboardService(db)
+        result = service.resume_automation(provider_id)
+        
+        if not result:
+            raise HTTPException(status_code=400, detail="Cannot resume automation - check consent status")
+        
+        return {"status": "success", "message": "Automation resumed"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/b2b/providers/{provider_id}/matches/{match_id}")
+async def get_match_details(
+    provider_id: str,
+    match_id: str,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Get detailed information about a specific match"""
+    try:
+        service = B2BProviderDashboardService(db)
+        details = service.get_match_details(provider_id, match_id)
+        
+        if not details:
+            raise HTTPException(status_code=404, detail="Match not found")
+        
+        return {"status": "success", "data": details}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.put("/b2b/providers/{provider_id}/settings")
+async def update_provider_settings(
+    provider_id: str,
+    settings: dict,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Update provider automation settings"""
+    try:
+        service = B2BProviderDashboardService(db)
+        result = service.update_settings(provider_id, settings)
+        
+        if not result:
+            raise HTTPException(status_code=404, detail="Provider not found")
+        
+        return {"status": "success", "message": "Settings updated"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/b2b/providers/{provider_id}/export")
+async def export_provider_data(
+    provider_id: str,
+    format: str = "json",
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Export provider data (matches, outreach, etc.)"""
+    try:
+        service = B2BProviderDashboardService(db)
+        data = service.export_data(provider_id, format)
+        return {"status": "success", "data": data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# B2B Analytics Dashboard Endpoints
+
+@router.get("/b2b/analytics/dashboard")
+async def get_b2b_analytics_dashboard(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_admin_user)
+):
+    """
+    Get full B2B platform analytics dashboard
+    
+    Returns: overview, provider analytics, buyer analytics, outreach analytics, revenue, trends
+    """
+    try:
+        service = B2BAnalyticsDashboardService(db)
+        dashboard = service.get_full_dashboard()
+        return {"status": "success", "data": dashboard}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/b2b/analytics/overview")
+async def get_b2b_overview(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Get B2B platform overview metrics"""
+    try:
+        service = B2BAnalyticsDashboardService(db)
+        overview = service._get_overview_metrics()
+        return {"status": "success", "data": overview}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/b2b/analytics/providers")
+async def get_b2b_provider_analytics(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Get provider performance analytics"""
+    try:
+        service = B2BAnalyticsDashboardService(db)
+        analytics = service._get_provider_analytics()
+        return {"status": "success", "data": analytics}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/b2b/analytics/buyers")
+async def get_b2b_buyer_analytics(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Get buyer engagement analytics"""
+    try:
+        service = B2BAnalyticsDashboardService(db)
+        analytics = service._get_buyer_analytics()
+        return {"status": "success", "data": analytics}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/b2b/analytics/outreach")
+async def get_b2b_outreach_analytics(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Get outreach performance analytics"""
+    try:
+        service = B2BAnalyticsDashboardService(db)
+        analytics = service._get_outreach_analytics()
+        return {"status": "success", "data": analytics}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/b2b/analytics/revenue")
+async def get_b2b_revenue_analytics(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_admin_user)
+):
+    """Get revenue analytics (admin only)"""
+    try:
+        service = B2BAnalyticsDashboardService(db)
+        analytics = service._get_revenue_analytics()
+        return {"status": "success", "data": analytics}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/b2b/analytics/funnel")
+async def get_b2b_conversion_funnel(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Get B2B conversion funnel analytics"""
+    try:
+        service = B2BAnalyticsDashboardService(db)
+        funnel = service._get_conversion_funnel()
+        return {"status": "success", "data": funnel}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/b2b/analytics/top-performers")
+async def get_b2b_top_performers(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Get top performing providers"""
+    try:
+        service = B2BAnalyticsDashboardService(db)
+        performers = service._get_top_performers()
+        return {"status": "success", "data": performers}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/b2b/analytics/compare")
+async def compare_providers(
+    request: dict,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Compare multiple providers"""
+    try:
+        provider_ids = request.get("provider_ids", [])
+        if not provider_ids:
+            raise HTTPException(status_code=400, detail="provider_ids required")
+        
+        service = B2BAnalyticsDashboardService(db)
+        comparison = service.get_provider_comparison(provider_ids)
+        return {"status": "success", "data": comparison}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/b2b/analytics/export")
+async def export_b2b_analytics(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_admin_user)
+):
+    """Export full B2B analytics report"""
+    try:
+        service = B2BAnalyticsDashboardService(db)
+        report = service.export_analytics_report()
+        return {"status": "success", "data": report}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================================
+# B2B System Health & Status
+# ============================================================================
+
+@router.get("/b2b/health")
+async def b2b_health_check(db: Session = Depends(get_db)):
+    """Check B2B platform health status"""
+    try:
+        # Check database connectivity
+        total_providers = db.query(ServiceProvider).count()
+        total_buyers = db.query(BuyerCompany).count()
+        total_matches = db.query(Match).count()
+        
+        return {
+            "status": "healthy",
+            "data": {
+                "providers": total_providers,
+                "buyers": total_buyers,
+                "matches": total_matches,
+                "database": "connected"
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"B2B platform unhealthy: {str(e)}")

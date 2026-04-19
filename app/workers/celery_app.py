@@ -65,4 +65,24 @@ celery_app.conf.beat_schedule = {
         'task': 'app.workers.tasks.discovery_analytics_task',
         'schedule': 86400.0,  # Daily - analyze discovery performance
     },
+    # B2B Matchmaking Platform Tasks (Fully Automated)
+    'b2b-provider-discovery': {
+        'task': 'app.workers.tasks.run_b2b_provider_discovery_task',
+        'schedule': 43200.0,  # Every 12 hours - discover new service providers
+    },
+    'b2b-buyer-discovery': {
+        'task': 'app.workers.tasks.run_b2b_buyer_discovery_task',
+        'schedule': 21600.0,  # Every 6 hours - discover new buyers
+    },
+    'b2b-response-tracking': {
+        'task': 'app.workers.tasks.check_buyer_responses_task',
+        'schedule': 3600.0,  # Every hour - check for buyer replies
+    },
+    'b2b-followup-sequences': {
+        'task': 'app.workers.tasks.run_b2b_followups_task',
+        'schedule': 86400.0,  # Every day - send follow-up emails
+    },
 }
+
+# Import tasks to register them with Celery
+import app.workers.tasks  # noqa: E402, F401

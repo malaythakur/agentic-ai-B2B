@@ -1229,3 +1229,196 @@ def full_automation_cycle_task(self):
     
     logger.info(f"Full automation cycle started: {result.id}")
     return {"status": "completed", "workflow_id": result.id}
+
+
+# ============================================================================
+# B2B Matchmaking Platform Tasks
+# ============================================================================
+
+@celery_app.task(bind=True, max_retries=3)
+def run_b2b_buyer_discovery_task(self):
+    """
+    Run B2B buyer discovery task
+    
+    Discovers buyers from free sources (GitHub, NewsAPI, Hacker News, Product Hunt)
+    Enriches with Gemini AI
+    Auto-matches to providers
+    """
+    import asyncio
+    from app.services.b2b_buyer_discovery import B2BBuyerDiscoveryService
+    from app.settings import settings
+    
+    db = SessionLocal()
+    try:
+        service = B2BBuyerDiscoveryService(
+            db=db,
+            gemini_api_key=settings.GEMINI_API_KEY,
+            newsapi_key=getattr(settings, 'NEWSAPI_KEY', None)
+        )
+        
+        results = asyncio.run(service.run_buyer_discovery())
+        
+        logger.info(f"B2B buyer discovery completed: {results['discovered']} discovered, {results['created']} created, {results['matched']} matched")
+        return {
+            "status": "success",
+            "discovered": results["discovered"],
+            "created": results["created"],
+            "matched": results["matched"]
+        }
+        
+    except Exception as e:
+        logger.error(f"B2B buyer discovery failed: {e}")
+        raise self.retry(exc=e, countdown=300)  # 5 min retry
+    finally:
+        db.close()
+
+
+@celery_app.task(bind=True, max_retries=3)
+def run_b2b_provider_discovery_task(self):
+    """
+    Run B2B provider discovery task
+    
+    Discovers service providers from free sources (Clutch, G2, GitHub, etc.)
+    Enriches with Gemini AI
+    Auto-sends opt-in emails
+    """
+    import asyncio
+    from app.services.b2b_provider_discovery import B2BProviderDiscoveryService
+    from app.settings import settings
+    
+    db = SessionLocal()
+    try:
+        service = B2BProviderDiscoveryService(
+            db=db,
+            gemini_api_key=settings.GEMINI_API_KEY,
+            platform_email=settings.PLATFORM_EMAIL or "platform@example.com",
+            dry_run=False
+        )
+        
+        results = asyncio.run(service.run_provider_discovery())
+        
+        logger.info(f"B2B provider discovery completed: {results['discovered']} discovered, {results['created']} created, {results['optin_sent']} opt-in emails sent")
+        return {
+            "status": "success",
+            "discovered": results["discovered"],
+            "created": results["created"],
+            "optin_sent": results["optin_sent"]
+        }
+        
+    except Exception as e:
+        logger.error(f"B2B provider discovery failed: {e}")
+        raise self.retry(exc=e, countdown=300)  # 5 min retry
+    finally:
+        db.close()
+
+
+@celery_app.task(bind=True, max_retries=3)
+def check_buyer_responses_task(self):
+    """
+    Check buyer responses to B2B outreach
+    
+    Monitors Gmail for replies
+    Classifies responses using AI
+    Updates match statuses
+    """
+    from app.services.b2b_response_tracking import B2BResponseTrackingService
+    from app.settings import settings
+    
+    db = SessionLocal()
+    try:
+        service = B2BResponseTrackingService(
+            db=db,
+            gemini_api_key=settings.GEMINI_API_KEY
+        )
+        
+        results = service.check_all_pending_responses()
+        
+        logger.info(f"Buyer response checking completed: {results['responses_found']} responses found out of {results['checked']} checked")
+        return {
+            "status": "success",
+            "checked": results["checked"],
+            "responses_found": results["responses_found"],
+            "processed": len(results["processed"])
+        }
+        
+    except Exception as e:
+        logger.error(f"Buyer response checking failed: {e}")
+        raise self.retry(exc=e, countdown=300)
+    finally:
+        db.close()
+
+
+@celery_app.task(bind=True, max_retries=3)
+def run_b2b_followups_task(self):
+    """
+    Run B2B follow-up sequences
+    
+    Sends Day 3, 7, 14 follow-ups to buyers who haven't responded
+    """
+    from app.services.b2b_followup_service import B2BFollowupService
+    
+    db = SessionLocal()
+    try:
+        service = B2BFollowupService(db)
+        results = service.process_all_followups()
+        
+        logger.info(f"B2B follow-ups completed: {results['sent']} sent, {results['skipped']} skipped")
+        return {
+            "status": "success",
+            "followups_sent": results["sent"],
+            "skipped": results["skipped"],
+            "errors": len(results["errors"])
+        }
+        
+    except Exception as e:
+        logger.error(f"B2B follow-ups failed: {e}")
+        raise self.retry(exc=e, countdown=300)
+    finally:
+        db.close()
+
+
+@celery_app.task(bind=True, max_retries=3)
+def run_b2b_full_cycle_task(self):
+    """
+    Run complete B2B automation cycle
+    
+    Orchestrates discovery, response checking, and follow-ups
+    """
+    from celery import chain, group
+    
+    logger.info("Starting B2B full automation cycle")
+    
+    # Run discovery first
+    discovery_result = run_b2b_buyer_discovery_task.delay()
+    
+    # Then check responses (independent of discovery)
+    check_responses_result = check_buyer_responses_task.delay()
+    
+    # Then run follow-ups (should run after response check)
+    followups_result = run_b2b_followups_task.delay()
+    
+    logger.info("B2B full cycle tasks queued")
+    
+    return {
+        "status": "queued",
+        "discovery_task_id": discovery_result.id,
+        "responses_task_id": check_responses_result.id,
+        "followups_task_id": followups_result.id
+    }
+
+
+# B2B Scheduled Tasks Configuration Notes:
+# Add these to your Celery Beat schedule in celery_app.py:
+#
+# 'run-b2b-buyer-discovery': {
+#     'task': 'app.workers.tasks.run_b2b_buyer_discovery_task',
+#     'schedule': 21600.0,  # Every 6 hours
+# },
+# 'check-buyer-responses': {
+#     'task': 'app.workers.tasks.check_buyer_responses_task',
+#     'schedule': 3600.0,  # Every hour
+# },
+# 'run-b2b-followups': {
+#     'task': 'app.workers.tasks.run_b2b_followups_task',
+#     'schedule': 86400.0,  # Every day
+# },
