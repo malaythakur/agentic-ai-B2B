@@ -1,27 +1,18 @@
 [
   {
-    "company": "MaxIQ",
-    "email_subject": "EchoIQ launch",
-    "email_body": "EchoIQ launch + BDR hiring.\n\nUsually looks busy early… but meetings lag.\n\nVolume or conversion breaking first?"
+    "company": "SecureBridge",
+    "email_subject": "Announced $25M Series B for cybersecurity. 4 open sales posi...",
+    "email_body": "Announced $25M Series B for cybersecurity. 4 open sales posi...\n\nThis usually creates a gap between activity and actual meetings. Volume or conversion breaking first?",
+    "to_email": "demo3@test.com",
+    "status": "queued",
+    "lead_id": "auto-securebridge-adfb"
   },
   {
-    "company": "Scrunch",
-    "email_subject": "Series A",
-    "email_body": "40% referral spike after Series A.\n\nEnterprise hires usually expect more meetings than that delivers."
-  },
-  {
-    "company": "Attio",
-    "email_subject": "Series B math",
-    "email_body": "Series B + SDR leadership hiring.\n\nThat's where the math shows up.\n\nSpeed or quality — what's the tradeoff?"
-  },
-  {
-    "company": "Pocus",
-    "email_subject": "First SDR",
-    "email_body": "Founding SDR hire while outbound motion takes shape.\n\nThat tends to stick.\n\nSignal for first 100 prospects?"
-  },
-  {
-    "company": "Opine",
-    "email_subject": "10x growth",
-    "email_body": "10x revenue growth then $5M raise.\n\nAt some point it stops fitting on your calendar.\n\nRelationships or repeatability — which breaks first?"
+    "company": "CloudSync AI",
+    "email_subject": "Just raised $12M Series A from a16z. Hiring 3 SDRs and VP Sa...",
+    "email_body": "Just raised $12M Series A from a16z. Hiring 3 SDRs and VP Sa...\n\nThis usually creates a gap between activity and actual meetings. Volume or conversion breaking first?",
+    "to_email": "demo1@test.com",
+    "status": "queued",
+    "lead_id": "auto-cloudsync-ai-fd15"
   }
 ]

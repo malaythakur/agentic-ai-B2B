@@ -1,82 +1,47 @@
 [
   {
-    "company": "MaxIQ",
-    "website": "https://www.getmaxiq.com",
-    "signal": "Launched EchoIQ on November 12, 2025 and is hiring a BDR and Sales Executive.",
-    "decision_maker": "Robert Sexton, CRO",
-    "fit_score": "10",
-    "pain_point": "EchoIQ spike + BDR hiring = crowded funnel, few conversions.",
-    "urgency_reason": "Launch window sets playbook. Bad timing kills momentum.",
-    "custom_hook": "EchoIQ launched with 10x user growth, but adding BDRs can still leave reps busy while calendars stay light.",
-    "message": "EchoIQ launch + BDR hiring.\n\nUsually looks busy early… but meetings lag.\n\nVolume or conversion breaking first?",
-    "followups": [
-      "this window disappears quickly",
-      "sometimes BDRs just amplify noise from the spike",
-      "could be volume. could be quality. usually one breaks first"
-    ]
+    "company": "CloudSync AI",
+    "website": "https://cloudsyncai.com",
+    "signal": "Just raised $12M Series A from a16z. Hiring 3 SDRs and VP Sales. | Contact: demo1@test.com",
+    "decision_maker": "Sarah Chen",
+    "decision_maker_full": "Sarah Chen, CEO",
+    "fit_score": 7,
+    "pain_point": "sales capacity",
+    "urgency_reason": "Series A requires scaling",
+    "message": "Just raised $12M Series A from a16z. Hiring 3 SDRs and VP Sa...\n\nThis usually creates a gap between activity and actual meetings. Volume or conversion breaking first?",
+    "employees": 45,
+    "funding_stage": "Series A",
+    "status": "new",
+    "real_email": "demo1@test.com"
   },
   {
-    "company": "Scrunch",
-    "website": "https://scrunch.com",
-    "signal": "Announced a $15M Series A on July 22, 2025 and has open Product Marketing Manager and Enterprise Account Executive roles.",
-    "decision_maker": "Chris Andrew, CEO & Founder",
-    "fit_score": "9",
-    "pain_point": "Series A + enterprise hires = pressure shifts from awareness to meetings.",
-    "urgency_reason": "New hires arrive expecting pipeline. Weak demand = wrong foundation.",
-    "custom_hook": "A $15M Series A can drive more attention fast, but new enterprise hires still end up busy while calendars stay thinner than they should.",
-    "message": "40% referral spike after Series A.\n\nEnterprise hires usually expect more meetings than that delivers.",
-    "followups": [
-      "enterprise ramp without pipeline gets messy",
-      "that referral traffic might not be enterprise-ready",
-      "marketing attention vs actual sales convos — which side winning?"
-    ]
+    "company": "DataFlow Systems",
+    "website": "https://dataflow.io",
+    "signal": "Launched DataFlow 2.0 with AI analytics. Hiring Enterprise AE. | Contact: demo2@test.com",
+    "decision_maker": "Marcus Johnson",
+    "decision_maker_full": "Marcus Johnson, CRO",
+    "fit_score": 9,
+    "pain_point": "enterprise pipeline",
+    "urgency_reason": "Series B requires scaling",
+    "message": "Launched DataFlow 2.0 with AI analytics. Hiring Enterprise A...\n\nThis usually creates a gap between activity and actual meetings. Volume or conversion breaking first?",
+    "employees": 120,
+    "funding_stage": "Series B",
+    "status": "new",
+    "real_email": "demo2@test.com"
   },
   {
-    "company": "Attio",
-    "website": "https://attio.com",
-    "signal": "Announced a $52M Series B on August 26, 2025 and has GTM openings including SDR Manager and Sales Manager.",
-    "decision_maker": "Nicolas Sharp, CEO & Co-founder",
-    "fit_score": "9",
-    "pain_point": "Series B + GTM managers = headcount vs meeting gap exposed.",
-    "urgency_reason": "Managers make pipeline gaps visible. One quarter max.",
-    "custom_hook": "A $52M Series B can add a lot of sales capacity fast, while calendars stay emptier than the headcount plan expects.",
-    "message": "Series B + SDR leadership hiring.\n\nThat's where the math shows up.\n\nSpeed or quality — what's the tradeoff?",
-    "followups": [
-      "new managers track everything",
-      "founder convos to manager metrics — awkward shift?",
-      "headcount plan vs calendar density — gap showing?"
-    ]
-  },
-  {
-    "company": "Pocus",
-    "website": "https://pocus.com",
-    "signal": "Currently hiring a Founding SDR, Account Executive, and Sales Engineer.",
-    "decision_maker": "Alexa Grabell, Co-Founder & CEO",
-    "fit_score": "9",
-    "pain_point": "Founding SDR + undefined outbound = high activity, low meetings pattern.",
-    "urgency_reason": "First SDR motion becomes template. Wrong meetings compound fast.",
-    "custom_hook": "Hiring a Founding SDR can create a lot of activity fast, but the first outbound motion often leaves teams busy and calendars uneven.",
-    "message": "Founding SDR hire while outbound motion takes shape.\n\nThat tends to stick.\n\nSignal for first 100 prospects?",
-    "followups": [
-      "first SDR playbook gets sticky fast",
-      "bad targeting early = expensive scaling",
-      "learning speed vs meeting quality — which wins?"
-    ]
-  },
-  {
-    "company": "Opine",
-    "website": "https://tryopine.com",
-    "signal": "Raised $5M on December 10, 2025 after reporting 10x revenue growth in 2025.",
-    "decision_maker": "Akash Ganapathi, CEO / Co-Founder",
-    "fit_score": "9",
-    "pain_point": "10x growth + funding = founder traction must scale beyond personal calendar.",
-    "urgency_reason": "Funding resets expectations. Investors want pipeline motion.",
-    "custom_hook": "A $5M round after 10x revenue can make the business look full, while the calendar underneath is still lighter than it needs to be.",
-    "message": "10x revenue growth then $5M raise.\n\nAt some point it stops fitting on your calendar.\n\nRelationships or repeatability — which breaks first?",
-    "followups": [
-      "founder sales to repeatable motion happens quick",
-      "relationships to team meetings — where's the break?",
-      "founder touch vs scalable outreach — which working?"
-    ]
+    "company": "SecureBridge",
+    "website": "https://securebridge.io",
+    "signal": "Announced $25M Series B for cybersecurity. 4 open sales positions. | Contact: demo3@test.com",
+    "decision_maker": "David Park",
+    "decision_maker_full": "David Park, VP Revenue",
+    "fit_score": 9,
+    "pain_point": "sales engineering",
+    "urgency_reason": "Series B requires scaling",
+    "message": "Announced $25M Series B for cybersecurity. 4 open sales posi...\n\nThis usually creates a gap between activity and actual meetings. Volume or conversion breaking first?",
+    "employees": 85,
+    "funding_stage": "Series B",
+    "status": "new",
+    "real_email": "demo3@test.com"
   }
 ]
