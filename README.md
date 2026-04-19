@@ -87,7 +87,147 @@ This system is an **AI-powered sales assistant** that automatically finds potent
 
 ---
 
-### The Complete Customer Journey
+## Complete System Workflow (Both Business Models)
+
+This system supports **two business models** that can run independently or simultaneously:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                    COMPLETE SYSTEM WORKFLOW                                      │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                 │
+│  [SHARED INFRASTRUCTURE]                                                        │
+│  ├─ FastAPI API (40+ endpoints)                                                 │
+│  ├─ PostgreSQL (17 tables)                                                      │
+│  ├─ Redis (caching, Celery broker)                                              │
+│  ├─ Celery (distributed task queue)                                             │
+│  ├─ Celery Beat (scheduled workflows)                                           │
+│  ├─ Gmail API (OAuth2, rate limiting, watch)                                   │
+│  ├─ OpenAI GPT-4 (email generation, classification)                            │
+│  ├─ Gemini AI (company enrichment, sentiment analysis)                          │
+│  ├─ Prometheus (metrics & monitoring)                                           │
+│  └─ Circuit Breakers (Gmail, OpenAI resilience)                                │
+│                                                                                 │
+│  [AUTONOMOUS LEAD DISCOVERY] - Feeds Both Models                               │
+│  ├─ GitHub API (tech companies, recent activity)                               │
+│  ├─ NewsAPI (funding, hiring announcements)                                     │
+│  ├─ Hacker News (job postings)                                                  │
+│  ├─ Product Hunt (new launches)                                                 │
+│  ├─ Job Boards (hiring signals)                                                 │
+│  ├─ Gemini AI enrichment (company research, decision makers, pain points)       │
+│  ├─ AI scoring (priority 0-100, auto-approve >= 50)                            │
+│  └─ Runs every 6 hours via Celery Beat                                         │
+│                                                                                 │
+│  ┌─────────────────────────────┬─────────────────────────────────────────────┐ │
+│  │ MODEL 1: DIRECT SALES      │  MODEL 2: B2B MATCHMAKING PLATFORM          │ │
+│  │ (Sell Your Own Product)    │  (Connect Providers to Buyers)              │ │
+│  ├─────────────────────────────┼─────────────────────────────────────────────┤ │
+│  │                             │                                             │ │
+│  │ 1. LEAD INGESTION           │ 1. PROVIDER ONBOARDING                      │ │
+│  │    ├─ Manual entry           │    ├─ Provider signs up with services      │ │
+│  │    ├─ API/webhook            │    ├─ Platform sends opt-in email          │ │
+│  │    ├─ JSON file import       │    ├─ Gmail API detects provider reply     │ │
+│  │    └─ Autonomous discovery   │    ├─ AI sentiment analysis confirms       │ │
+│  │                               │    ├─ Automation enabled                  │ │
+│  │ 2. LEAD QUALIFICATION        │    └─ Acknowledgment email sent           │ │
+│  │    ├─ 5-dimensional scoring  │                                             │ │
+│  │    ├─ Auto-approve >= 50     │ 2. BUYER DISCOVERY & MATCHING             │ │
+│  │    └─ ICP filtering          │    ├─ Autonomous buyer discovery            │ │
+│  │                               │    ├─ Manual buyer entry                  │ │
+│  │ 3. BATCH GENERATION          │    ├─ Buyer enrichment (industry, funding) │ │
+│  │    ├─ Daily scheduled task    │    ├─ ICP-based matching (0-100 score)    │ │
+│  │    ├─ Template matching      │    ├─ Auto-approve >= 70                  │ │
+│  │    ├─ AI personalization     │    └─ Match creation                      │ │
+│  │    └─ Queue for sending      │                                             │ │
+│  │                               │ 3. AUTOMATED OUTREACH                     │ │
+│  │ 4. EMAIL SENDING             │    ├─ Platform sends from provider        │ │
+│  │    ├─ Gmail API integration   │    ├─ Personalized with buyer signals     │ │
+│  │    ├─ Rate limiting (30/hr)   │    ├─ Rate limiting (30/hr)               │ │
+│  │    ├─ Deliverability checks   │    ├─ Duplicate prevention                │ │
+│  │    └─ Domain warmup          │    └─ Response tracking enabled           │ │
+│  │                               │                                             │ │
+│  │ 5. REPLY MONITORING           │ 4. RESPONSE TRACKING                     │ │
+│  │    ├─ Gmail watch (24/7)      │    ├─ Gmail watch monitors buyer replies   │ │
+│  │    ├─ Thread fetching         │    ├─ AI classifies responses              │ │
+│  │    └─ Event-driven processing│    ├─ Notify provider of interest         │ │
+│  │                               │    └─ Update match status                │ │
+│  │ 6. REPLY CLASSIFICATION       │                                             │ │
+│  │    ├─ GPT-4 4-way class       │ 5. FOLLOW-UP SEQUENCES                   │ │
+│  │    ├─ interested/not_now/     │    ├─ Day 3: Value-add follow-up          │ │
+│  │    ├─ not_interested/         │    ├─ Day 7: Case study follow-up         │ │
+│  │    └─ unsubscribe            │    ├─ Day 14: Last soft close              │ │
+│  │                               │    └─ Stop on reply/unsubscribe           │ │
+│  │ 7. PIPELINE TRANSITIONS       │                                             │ │
+│  │    ├─ 9-state machine         │ 6. PROVIDER DASHBOARD                     │ │
+│  │    ├─ Auto-transitions        │    ├─ Automation status (active/paused)   │ │
+│  │    ├─ Meeting booking         │    ├─ Match viewing with scores           │ │
+│  │    └─ Deal tracking           │    ├─ Outreach results                    │ │
+│  │                               │    ├─ Settings adjustment                 │ │
+│  │ 8. FOLLOW-UP AUTOMATION       │    └─ Analytics (reply rate, ROI)        │ │
+│  │    ├─ Day 2, 5, 9 sequences  │                                             │ │
+│  │    ├─ Auto-schedule           │ 7. ANALYTICS DASHBOARD                    │ │
+│  │    └─ Stop on reply           │    ├─ Platform-wide metrics                │ │
+│  │                               │    ├─ Provider performance                 │ │
+│  │ 9. HUMAN ESCALATION           │    ├─ Buyer engagement trends             │ │
+│  │    ├─ High-value leads        │    ├─ Revenue tracking                    │ │
+│  │    ├─ Pricing questions       │    └─ ROI calculation                      │ │
+│  │    ├─ Angry/negative replies  │                                             │ │
+│  │    └─ Complex inquiries       │ 8. REVENUE MODEL                          │ │
+│  │                               │    ├─ Subscription fees ($500-2K/mo)      │ │
+│  │ 10. CRM INTEGRATION           │    ├─ Pay-per-meeting ($50-500)           │ │
+│  │     ├─ Salesforce sync        │    └─ Success fees (5-10% of deal)        │ │
+│  │     ├─ HubSpot sync           │                                             │ │
+│  │     └─ Deal tracking          │                                             │ │
+│  │                               │                                             │ │
+│  └─────────────────────────────┴─────────────────────────────────────────────┘ │
+│                                                                                 │
+│  [SHARED LEARNING & OPTIMIZATION] - Improves Both Models                       │
+│  ├─ Template A/B testing (auto-promotes winners)                               │
+│  ├─ Feedback learning loop (optimizes based on performance)                     │
+│  ├─ Deliverability monitoring (domain health, warmup)                           │
+│  ├─ Analytics dashboards (reply rates, conversion rates)                        │
+│  └─ Continuous improvement (self-optimizing system)                            │
+│                                                                                 │
+└─────────────────────────────────────────────────────────────────────────────────┘
+```
+
+### How to Choose Which Model to Use
+
+**Model 1 (Direct Sales):** Use if you have your own product/service to sell
+- Configure your product/services in the offer matching engine
+- Set up your ICP criteria
+- Let the system find and qualify leads automatically
+- System sends emails from your domain to your prospects
+
+**Model 2 (B2B Matchmaking):** Use if you want to be a platform connecting providers to buyers
+- Onboard service providers with their services and ICP criteria
+- Discover buyers (autonomous or manual)
+- System matches buyers to providers based on ICP
+- Platform sends introductions on behalf of providers
+- Earn revenue from subscriptions, meetings, and success fees
+
+**Both Models:** You can run both models simultaneously in the same system
+- Use autonomous lead discovery for both
+- Share the same infrastructure (Gmail, AI, database)
+- Separate data models (leads vs providers/buyers)
+- Independent workflows but shared optimization
+
+### Key Differences Between Models
+
+| Feature | Direct Sales | B2B Matchmaking |
+|---------|-------------|-----------------|
+| **Who sends emails** | Your domain | Platform sends from provider domain |
+| **Who receives emails** | Your prospects | Buyers (on behalf of providers) |
+| **Revenue source** | Your product sales | Provider fees, meeting fees, success fees |
+| **Lead source** | Autonomous + manual | Autonomous + manual (buyers) |
+| **Consent required** | No | Yes (provider opt-in) |
+| **Matching logic** | Signal → Your offer | Buyer ICP → Provider services |
+| **Dashboard** | Pipeline dashboard | Provider + Analytics dashboards |
+| **Follow-ups** | Day 2, 5, 9 | Day 3, 7, 14 |
+
+---
+
+### Direct Sales Model Workflow (Model 1)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
